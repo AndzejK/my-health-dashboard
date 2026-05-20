@@ -38,13 +38,24 @@ def render_garmin_controls(paths: dict) -> None:
                 save_json=save_json,
             )
             st.success(f"Updated {csv_path}")
-            st.dataframe(pd.DataFrame(rows), width="stretch")
+            # Create the dataframe and reorder to match storage order
+            df = pd.DataFrame(rows)
+            column_order = [
+                "date", "total_sleep", "total_sleep_hours", "deep_sleep", "deep_sleep_hours", 
+                "rem_sleep", "rem_sleep_hours", "sleep_score", "light_sleep", 
+                "light_sleep_hours", "awake", "awake_hours", "weight", 
+                "sleep_start_local", "sleep_end_local", "sleep_start_gmt", 
+                "sleep_end_gmt", "sleep_start_local_ms", "sleep_end_local_ms"
+            ]
+            ordered_cols = [c for c in column_order if c in df.columns]
+            
+            st.dataframe(df[ordered_cols], width="stretch")
             st.session_state["garmin_data_pulled"] = True
         except Exception as exc:
             st.error(str(exc))
 
     st.subheader("Sync to Google Sheets")
-    garmin_csv = paths["garmin_output_dir"] / "sleep_summary.csv"
+    garmin_csv = paths["garmin_output_dir"] / "garmin_metrics_summary.csv"
     st.write(f"Source: `{garmin_csv}`")
 
     if st.button("Push to Google Sheets"):

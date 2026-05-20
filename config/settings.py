@@ -17,9 +17,9 @@ def get_default_paths() -> dict[str, Path]:
     return {
         "reports_dir": reports_dir,
         "garmin_output_dir": reports_dir / "garmin_sleep",
-        "garmin_token_dir": APP_DIR / "tokens" / "garmin",
-        "google_credentials": Path(os.getenv("GOOGLE_CREDENTIALS_FILE", APP_DIR / "credentials.json")).expanduser(),
-        "google_token": Path(APP_DIR / "tokens" / "google_token.json").expanduser(),
+        "garmin_token_dir": Path("/Users/rock/Documents/Code/secrets/garmin"),
+        "google_credentials": Path("/Users/rock/Documents/Code/secrets/google/credentials.json"),
+        "google_token": Path("/Users/rock/Documents/Code/secrets/google/google_token.json"),
         "cronometer_project": cronometer_project,
     }
 

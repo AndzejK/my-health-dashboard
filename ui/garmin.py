@@ -18,17 +18,21 @@ def render_sleep_chart(garmin_csv: Path) -> None:
         "REM, h": "rem_sleep_hours",
         "Total Sleep, h": "total_sleep_hours",
         "Score (max 100)": "sleep_score",
+        "Weight, kg": "weight",
     }
 
-    plot_df = df[["date", *metric_columns.values()]].copy()
+    plot_df = df[["date", *[col for col in metric_columns.values() if col in df.columns]]].copy()
     plot_df["date"] = pd.to_datetime(plot_df["date"], errors="coerce")
     plot_df = plot_df.dropna(subset=["date"]).sort_values("date")
-    for column in metric_columns.values():
+    # Only iterate over keys that are actually present in the DataFrame columns
+    valid_columns = [col for col in metric_columns.values() if col in plot_df.columns]
+    
+    for column in valid_columns:
         plot_df[column] = pd.to_numeric(plot_df[column], errors="coerce")
 
     melted = plot_df.melt(
         id_vars=["date"],
-        value_vars=list(metric_columns.values()),
+        value_vars=valid_columns,
         var_name="metric_key",
         value_name="value",
     ).dropna(subset=["value"])

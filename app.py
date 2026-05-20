@@ -7,15 +7,23 @@ from ui.settings import render_settings
 
 st.set_page_config(page_title="Health Data Sync", page_icon=":bar_chart:", layout="wide")
 
+# Add Logo and Banner
+# Using columns for logo placement, and st.image for banner
+col_logo, col_title = st.columns([1, 10])
+with col_logo:
+    st.image("/Users/rock/Documents/Code/AI_Assets/health_data_app_LOGO.png", width=100)
+with col_title:
+    st.title("Health Data Sync")
+
+st.image("/Users/rock/Documents/Code/AI_Assets/health_data_app_BANNER.png", use_container_width=True)
+
 initialize_session_state()
 paths = get_paths_from_session()
-
-st.title("Health Data Sync")
 
 tab_garmin, tab_cronometer, tab_settings = st.tabs(["Garmin", "Cronometer", "Settings"])
 
 with tab_garmin:
-    render_sleep_chart(paths["garmin_output_dir"] / "sleep_summary.csv")
+    render_sleep_chart(paths["garmin_output_dir"] / "garmin_metrics_summary.csv")
     render_garmin_controls(paths)
 
 with tab_cronometer:

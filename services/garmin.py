@@ -58,21 +58,34 @@ def pull_sleep_range(
     for current_date in date_range(start_date, end_date):
         date_text = current_date.isoformat()
         sleep_data = client.get_sleep_data(date_text)
+        # Fetch body composition data for weight
+        body_data = client.get_body_composition(date_text)
+        
         if save_json:
             write_json(output_dir / f"sleep_{date_text}.json", sleep_data)
-        rows.append(sleep_summary_row(date_text, sleep_data))
+            write_json(output_dir / f"body_{date_text}.json", body_data)
+            
+        rows.append(sleep_summary_row(date_text, sleep_data, body_data))
 
-    csv_path = upsert_garmin_summary(output_dir, rows)
+    csv_path = upsert_garmin_summary(output_dir, rows, "garmin_metrics_summary.csv")
     return csv_path, rows
 
 
-def sleep_summary_row(cdate: str, sleep_data: dict[str, Any]) -> dict[str, Any]:
+def sleep_summary_row(cdate: str, sleep_data: dict[str, Any], body_data: dict[str, Any]) -> dict[str, Any]:
     sleep = sleep_data.get("dailySleepDTO") or {}
     scores = sleep.get("sleepScores") or {}
     overall_score = scores.get("overall") or {}
+    
+    # Extract weight from totalAverage object in body composition data
+    weight = ""
+    if body_data and "totalAverage" in body_data:
+        raw_weight = body_data["totalAverage"].get("weight")
+        if raw_weight:
+            weight = f"{float(raw_weight) / 1000:.2f}"
 
     return {
         "date": cdate,
+        "weight": weight,
         "total_sleep": seconds_to_hm(sleep.get("sleepTimeSeconds")),
         "total_sleep_hours": seconds_to_hours(sleep.get("sleepTimeSeconds")),
         "deep_sleep": seconds_to_hm(sleep.get("deepSleepSeconds")),

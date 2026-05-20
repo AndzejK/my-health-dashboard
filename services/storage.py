@@ -21,6 +21,7 @@ GARMIN_FIELDNAMES = [
     "light_sleep_hours",
     "awake",
     "awake_hours",
+    "weight",
     "sleep_start_local",
     "sleep_end_local",
     "sleep_start_gmt",
@@ -60,9 +61,9 @@ def normalize_garmin_row(row: dict[str, Any]) -> dict[str, Any]:
     return row
 
 
-def upsert_garmin_summary(output_dir: Path, rows: list[dict[str, Any]]) -> Path:
+def upsert_garmin_summary(output_dir: Path, rows: list[dict[str, Any]], filename: str = "garmin_metrics_summary.csv") -> Path:
     ensure_dir(output_dir)
-    csv_path = output_dir / "sleep_summary.csv"
+    csv_path = output_dir / filename
     existing_rows = read_summary_rows(csv_path)
 
     for row in rows:
