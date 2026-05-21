@@ -1,3 +1,4 @@
+from pathlib import Path
 import streamlit as st
 from config.settings import initialize_session_state, get_paths_from_session
 from ui.garmin import render_sleep_chart
@@ -5,17 +6,22 @@ from ui.garmin_controls import render_garmin_controls
 from ui.cronometer import render_cronometer_controls
 from ui.settings import render_settings
 
+APP_DIR = Path(__file__).resolve().parent
+
 st.set_page_config(page_title="Health Data Sync", page_icon=":bar_chart:", layout="wide")
 
 # Add Logo and Banner
-# Using columns for logo placement, and st.image for banner
+# Using absolute paths for robustness
+LOGO_PATH = APP_DIR / "assets" / "health_data_app_LOGO.png"
+BANNER_PATH = APP_DIR / "assets" / "health_data_app_BANNER.png"
+
 col_logo, col_title = st.columns([1, 10])
 with col_logo:
-    st.image("assets/health_data_app_LOGO.png", width=100)
+    st.image(str(LOGO_PATH), width=100)
 with col_title:
     st.title("Health Data Sync")
 
-st.image("assets/health_data_app_BANNER.png", use_container_width=True)
+st.image(str(BANNER_PATH), use_container_width=True)
 
 initialize_session_state()
 paths = get_paths_from_session()
