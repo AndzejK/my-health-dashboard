@@ -19,6 +19,8 @@ def render_sleep_chart(garmin_csv: Path) -> None:
         "Total Sleep, h": "total_sleep_hours",
         "Score (max 100)": "sleep_score",
         "Weight, kg": "weight",
+        "Calories Burned": "calories_burned",
+        "Calories Consumed": "calories_consumed",
     }
 
     plot_df = df[["date", *[col for col in metric_columns.values() if col in df.columns]]].copy()
@@ -56,7 +58,7 @@ def render_sleep_chart(garmin_csv: Path) -> None:
                 legend=None,
                 scale=alt.Scale(
                     domain=list(metric_columns.keys()),
-                    range=["#2a9d8f", "#e76f51", "#f4a261", "#264653"],
+                    range=["#2a9d8f", "#e76f51", "#f4a261", "#264653", "#8f2d56", "#6c5ce7"],
                 ),
             ),
             tooltip=[

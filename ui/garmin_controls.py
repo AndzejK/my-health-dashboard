@@ -25,7 +25,7 @@ def render_garmin_controls(paths: dict) -> None:
 
     save_json = st.checkbox("Save raw daily JSON", value=True)
 
-    if st.button("Pull Garmin sleep", type="primary"):
+    if st.button("Pull Garmin sleep + calories", type="primary"):
         try:
             csv_path, rows = pull_sleep_range(
                 start_date=start_date,
@@ -45,7 +45,8 @@ def render_garmin_controls(paths: dict) -> None:
                 "rem_sleep", "rem_sleep_hours", "sleep_score", "light_sleep", 
                 "light_sleep_hours", "awake", "awake_hours", "weight", 
                 "sleep_start_local", "sleep_end_local", "sleep_start_gmt", 
-                "sleep_end_gmt", "sleep_start_local_ms", "sleep_end_local_ms"
+                "sleep_end_gmt", "sleep_start_local_ms", "sleep_end_local_ms",
+                "calories_burned", "calories_consumed"
             ]
             ordered_cols = [c for c in column_order if c in df.columns]
             

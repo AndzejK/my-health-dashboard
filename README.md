@@ -1,6 +1,23 @@
 # Health Data Sync
 
-A modularized Streamlit application for syncing health data from Garmin to Google Sheets and exporting Cronometer data via a Go backend.
+A Streamlit app for moving health data into Google Sheets.
+
+It currently supports:
+- Garmin sleep and calorie data
+- Cronometer exports through a Go backend
+- Google Sheets sync for the exported data
+
+## What This App Does
+
+The app has two main tabs:
+- `Garmin` pulls Garmin data and pushes it to Google Sheets
+- `Cronometer` exports Cronometer data and pushes selected sections to Google Sheets
+
+The `Settings` tab is where you set:
+- local folders
+- Google Sheets file paths
+- Google auth
+- the Cronometer Go project path
 
 ## Prerequisites
 
@@ -45,6 +62,8 @@ The app uses local files for Google access and Garmin login state. These files a
 - `garmin` token folder: local Garmin auth state saved by the app.
 - `data/`: local output folder for reports and exported CSV files.
 
+The app lets you edit these paths in the `Settings` tab, so you usually do not need to hard-code them.
+
 ### Important Windows Note
 The README may show example paths from a macOS machine, but you do **not** need to use those exact paths on Windows. In the app, open the **Settings** tab and replace every path with a Windows path on your own machine, for example:
 
@@ -87,6 +106,67 @@ The app then writes `google_token.json` to the path shown in **Google token file
 - If you move the files later, update the paths in **Settings**.
 - If the token is deleted or becomes invalid, run the Google auth flow again.
 - Keep the `credentials.json` and `google_token.json` files private.
+
+## Garmin Data
+
+- The Garmin pull now includes sleep, weight, and calories consumed from the Garmin nutrition endpoints.
+- The same generated CSV is still used for the Google Sheets push, so the new calories column will sync with the Garmin sheet automatically.
+
+## Cronometer Data
+
+Cronometer export now works as a date-range workflow with checkboxes.
+
+In the `Cronometer` tab you can choose:
+- `Start date`
+- `End date`
+- which sections to fetch:
+  - `Fetch servings`
+  - `Fetch daily nutrition`
+  - `Fetch biometrics`
+  - `Fetch notes`
+
+Only the checked sections are exported and pushed to Google Sheets.
+
+### Cronometer Output
+
+Cronometer files are written to the Cronometer output folder, separate from Garmin output.
+
+Default folders:
+- `Reports folder`: `data/reports`
+- `Garmin output folder`: `data/reports/garmin_sleep`
+- `Cronometer output folder`: `data/reports/cronometer`
+
+If you change those paths in `Settings`, the app will use your custom paths instead.
+
+### Cronometer Sheets
+
+The Cronometer exporter pushes data into these Google Sheets tabs:
+- `reportCronometer` for servings
+- `dailyNutritionReport` for daily nutrition
+- `biometricsReport` for biometrics
+
+If a tab already exists, the app appends new rows to it.
+The header row is kept once at the top.
+
+### Important Cronometer Note
+
+Cronometer can rate-limit export requests.
+If that happens, try:
+- selecting only one section, such as `Fetch daily nutrition`
+- using a smaller date range
+- trying again later
+
+That is normal behavior with the current Cronometer export path.
+
+## Recent Changes
+
+These are the main changes that were added recently:
+- Cronometer export moved into a separate output folder
+- Cronometer now supports a date range instead of a single day only
+- Cronometer now has checkboxes so you can choose what to fetch
+- Cronometer can push to separate Google Sheets tabs for servings, daily nutrition, and biometrics
+- Google Sheets token handling was fixed so the app can use the saved token file plus the OAuth credentials file
+- Garmin now includes calories burned data in the sync flow
 
 ## Run the Application
 

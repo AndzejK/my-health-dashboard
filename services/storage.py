@@ -28,6 +28,8 @@ GARMIN_FIELDNAMES = [
     "sleep_end_gmt",
     "sleep_start_local_ms",
     "sleep_end_local_ms",
+    "calories_burned",
+    "calories_consumed",
 ]
 
 

@@ -12,6 +12,7 @@ def render_settings(paths: dict) -> None:
     st.subheader("Workspace")
     st.text_input("Reports folder", key="reports_dir")
     st.text_input("Garmin output folder", key="garmin_output_dir")
+    st.text_input("Cronometer output folder", key="cronometer_output_dir")
     st.text_input("Garmin token folder", key="garmin_token_dir")
     st.text_input("Go project folder", key="cronometer_project")
 
@@ -19,6 +20,7 @@ def render_settings(paths: dict) -> None:
     st.text_input("Spreadsheet ID", key="spreadsheet_id")
     st.text_input("Garmin sheet", key="garmin_sheet")
     st.text_input("Servings sheet", key="servings_sheet")
+    st.text_input("Daily nutrition sheet", key="daily_nutrition_sheet")
     st.text_input("Biometrics sheet", key="biometrics_sheet")
     st.text_input("Google credentials file", key="google_credentials")
     st.text_input("Google token file", key="google_token")
