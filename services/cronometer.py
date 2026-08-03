@@ -21,10 +21,11 @@ def run_go_exporter(
     fetch_daily_nutrition: bool,
     fetch_biometrics: bool,
     fetch_notes: bool,
+    sync_to_google_sheets: bool,
 ) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     env["CRONOMETER_REPORTS_DIR"] = str(reports_dir)
-    env["SPREADSHEET_ID"] = spreadsheet_id
+    env["SPREADSHEET_ID"] = spreadsheet_id if sync_to_google_sheets else ""
     env["GOOGLE_SHEET_NAME"] = servings_sheet
     env["DAILY_NUTRITION_SHEET_NAME"] = daily_nutrition_sheet
     env["BIOMETRICS_SHEET_NAME"] = biometrics_sheet

@@ -114,18 +114,45 @@ The app then writes `google_token.json` to the path shown in **Google token file
 
 ## Cronometer Data
 
-Cronometer export now works as a date-range workflow with checkboxes.
+Cronometer now works more like a small dashboard than a raw exporter.
 
 In the `Cronometer` tab you can choose:
 - `Start date`
 - `End date`
+- whether to sync to Google Sheets
 - which sections to fetch:
   - `Fetch servings`
   - `Fetch daily nutrition`
   - `Fetch biometrics`
   - `Fetch notes`
 
-Only the checked sections are exported and pushed to Google Sheets.
+Only the checked sections are fetched.
+If `Sync to Google Sheets` is off, the app keeps the run local only.
+
+After the fetch finishes, the app shows:
+- `Food Diary`
+- `Micronutrients`
+- an execution log
+
+The Cronometer tab also loads the latest saved local CSV files automatically when you open the app.
+That means you can view the last saved report without fetching again.
+Use `Reload local cache` if you want the app to rescan the folder, or `Fetch Cronometer data` if you want to pull fresh data from Cronometer.
+
+### Food Diary
+
+This view shows what you ate for the selected day.
+It uses the Cronometer servings export and groups the items by meal or section.
+
+### Micronutrients
+
+This view shows the daily nutrient summary for the selected day.
+It includes:
+- macros
+- vitamins
+- minerals
+- other nutrient totals
+
+The nutrient summary is shown as horizontal bars plus a table.
 
 ### Cronometer Output
 
@@ -145,7 +172,7 @@ The Cronometer exporter pushes data into these Google Sheets tabs:
 - `dailyNutritionReport` for daily nutrition
 - `biometricsReport` for biometrics
 
-If a tab already exists, the app appends new rows to it.
+If `Sync to Google Sheets` is enabled, the app appends new rows to the matching tab.
 The header row is kept once at the top.
 
 ### Important Cronometer Note
@@ -158,9 +185,25 @@ If that happens, try:
 
 That is normal behavior with the current Cronometer export path.
 
+### Local Cache Behavior
+
+The app saves Cronometer CSV files locally and reuses them for display.
+
+Saved files include:
+- `servings_<date-range>.csv`
+- `daily_nutrition.csv`
+- `biometrics_<date-range>.csv`
+- `notes_<date-range>.csv`
+
+When you reopen the app, the Cronometer dashboard loads the most recent saved files from the Cronometer output folder.
+This lets you review your last fetched data without hitting Cronometer again.
+
 ## Recent Changes
 
 These are the main changes that were added recently:
+- Cronometer now has a dashboard-style local view with Food Diary and Micronutrients tabs
+- Cronometer now loads the latest saved local CSVs automatically on startup
+- Cronometer can run local-only or sync to Google Sheets
 - Cronometer export moved into a separate output folder
 - Cronometer now supports a date range instead of a single day only
 - Cronometer now has checkboxes so you can choose what to fetch
