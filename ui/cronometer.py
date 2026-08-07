@@ -181,6 +181,10 @@ def render_cronometer_controls(paths: dict) -> None:
             "start_date": start_date.isoformat(),
             "end_date": end_date.isoformat(),
             "range_label": range_label,
+            "servings_path": str(paths["cronometer_output_dir"] / "servings.csv"),
+            "daily_nutrition_path": str(paths["cronometer_output_dir"] / "daily_nutrition.csv"),
+            "biometrics_path": str(paths["cronometer_output_dir"] / "biometrics.csv"),
+            "notes_path": str(paths["cronometer_output_dir"] / "notes.csv"),
             "fetch_servings": fetch_servings,
             "fetch_daily_nutrition": fetch_daily_nutrition,
             "fetch_biometrics": fetch_biometrics,
@@ -223,11 +227,13 @@ def render_cronometer_results(paths: dict, run_info: dict) -> None:
         key=f"cronometer_view_day_{run_info.get('range_label', 'latest')}",
     )
 
-    food_tab, micros_tab = st.tabs(["Food Diary", "Micronutrients"])
+    food_tab, micros_tab, trends_tab = st.tabs(["Food Diary", "Micronutrients", "Trends"])
     with food_tab:
         render_food_diary_tab(servings_df, daily_df, selected_date)
     with micros_tab:
         render_micronutrients_tab(daily_df, selected_date)
+    with trends_tab:
+        render_trends_tab(servings_df, daily_df, run_info)
 
 
 def render_execution_log(run_info: dict) -> None:
@@ -323,17 +329,145 @@ def render_micronutrients_tab(daily_df: pd.DataFrame, selected_date: str) -> Non
     st.dataframe(nutrient_df, width="stretch", hide_index=True)
 
 
+def render_trends_tab(servings_df: pd.DataFrame, daily_df: pd.DataFrame, run_info: dict) -> None:
+    st.caption("Compare a date range against your full saved history.")
+
+    if daily_df.empty or "Date" not in daily_df.columns:
+        st.info("No saved micronutrient history is available yet.")
+        return
+
+    history_dates = pd.to_datetime(daily_df["Date"], errors="coerce").dropna().dt.date
+    if history_dates.empty:
+        st.info("No valid dates were found in the saved micronutrient file.")
+        return
+
+    history_start = min(history_dates)
+    history_end = max(history_dates)
+
+    default_start = parse_iso_date(run_info.get("start_date")) or history_start
+    default_end = parse_iso_date(run_info.get("end_date")) or history_end
+    if default_start < history_start:
+        default_start = history_start
+    if default_end > history_end:
+        default_end = history_end
+
+    col_start, col_end = st.columns(2)
+    with col_start:
+        trend_start = st.date_input(
+            "Trend start",
+            value=default_start,
+            min_value=history_start,
+            max_value=history_end,
+            key=f"cronometer_trend_start_{run_info.get('range_label', 'latest')}",
+        )
+    with col_end:
+        trend_end = st.date_input(
+            "Trend end",
+            value=default_end,
+            min_value=history_start,
+            max_value=history_end,
+            key=f"cronometer_trend_end_{run_info.get('range_label', 'latest')}",
+        )
+
+    if trend_end < trend_start:
+        st.error("Trend end must be on or after trend start.")
+        return
+
+    range_df = filter_range_frame(daily_df, "Date", trend_start, trend_end)
+    if range_df.empty:
+        st.info("No micronutrient rows were found for that range.")
+        return
+
+    range_servings_df = filter_range_frame(servings_df, "Day", trend_start, trend_end)
+    range_label = f"{trend_start.isoformat()} to {trend_end.isoformat()}"
+    st.markdown(f"#### Range: {range_label}")
+
+    summary_cols = st.columns(4)
+    summary_cols[0].metric("Days", str(range_df.shape[0]))
+    summary_cols[1].metric("Average Energy", format_metric(range_df["Energy (kcal)"].mean(), "kcal"))
+    summary_cols[2].metric("Average Protein", format_metric(range_df["Protein (g)"].mean(), "g"))
+    summary_cols[3].metric("Average Water", format_metric(range_df["Water (g)"].mean(), "g"))
+
+    category = st.selectbox(
+        "Trend category",
+        list(NUTRIENT_CATEGORIES.keys()),
+        key=f"cronometer_trend_category_{run_info.get('range_label', 'latest')}",
+    )
+
+    comparison_df = build_average_comparison_frame(
+        range_df=range_df,
+        history_df=daily_df,
+        nutrient_columns=NUTRIENT_CATEGORIES[category],
+    )
+    if comparison_df.empty:
+        st.info("No values found for that category in the selected range.")
+    else:
+        chart_df = comparison_df.melt(
+            id_vars=["nutrient"],
+            value_vars=["range_average", "history_average"],
+            var_name="source",
+            value_name="value",
+        )
+        chart_df["source"] = chart_df["source"].replace(
+            {
+                "range_average": "Selected range",
+                "history_average": "Full saved history",
+            }
+        )
+
+        chart = (
+            alt.Chart(chart_df)
+            .mark_bar()
+            .encode(
+                y=alt.Y("nutrient:N", sort="-x", title=None),
+                x=alt.X("value:Q", title=None),
+                color=alt.Color("source:N", legend=alt.Legend(title=None)),
+                tooltip=[
+                    alt.Tooltip("nutrient:N", title="Nutrient"),
+                    alt.Tooltip("source:N", title="Source"),
+                    alt.Tooltip("value:Q", title="Value", format=".2f"),
+                ],
+            )
+            .properties(height=max(260, 24 * len(comparison_df)))
+        )
+        st.altair_chart(chart, width="stretch")
+        st.dataframe(comparison_df, width="stretch", hide_index=True)
+
+    if not range_servings_df.empty and "Food Name" in range_servings_df.columns:
+        st.markdown("#### Most frequent foods in this range")
+        food_counts = (
+            range_servings_df["Food Name"]
+            .fillna("")
+            .astype(str)
+            .value_counts()
+            .head(10)
+            .reset_index()
+        )
+        food_counts.columns = ["Food Name", "Count"]
+        st.dataframe(food_counts, width="stretch", hide_index=True)
+
+
+def filter_range_frame(df: pd.DataFrame, date_column: str, start_date: date, end_date: date) -> pd.DataFrame:
+    if df.empty or date_column not in df.columns:
+        return pd.DataFrame()
+
+    frame = df.copy()
+    frame[date_column] = pd.to_datetime(frame[date_column], errors="coerce").dt.date
+    mask = (frame[date_column] >= start_date) & (frame[date_column] <= end_date)
+    return frame.loc[mask].copy()
+
+
 def build_export_paths(paths: dict, run_info: dict) -> tuple[Path, Path, Path, Path]:
     servings_path_str = str(run_info.get("servings_path", "")).strip()
     daily_path_str = str(run_info.get("daily_nutrition_path", "")).strip()
     biometrics_path_str = str(run_info.get("biometrics_path", "")).strip()
     notes_path_str = str(run_info.get("notes_path", "")).strip()
-    range_label = run_info.get("range_label", "")
+    output_dir = paths["cronometer_output_dir"]
 
-    servings_path = Path(servings_path_str) if servings_path_str else paths["cronometer_output_dir"] / f"servings_{range_label}.csv"
-    daily_path = Path(daily_path_str) if daily_path_str else paths["cronometer_output_dir"] / "daily_nutrition.csv"
-    biometrics_path = Path(biometrics_path_str) if biometrics_path_str else paths["cronometer_output_dir"] / f"biometrics_{range_label}.csv"
-    notes_path = Path(notes_path_str) if notes_path_str else paths["cronometer_output_dir"] / f"notes_{range_label}.csv"
+    servings_path = Path(servings_path_str) if servings_path_str else output_dir / "servings.csv"
+    daily_path = Path(daily_path_str) if daily_path_str else output_dir / "daily_nutrition.csv"
+    biometrics_path = Path(biometrics_path_str) if biometrics_path_str else output_dir / "biometrics.csv"
+    notes_path = Path(notes_path_str) if notes_path_str else output_dir / "notes.csv"
 
     return servings_path, daily_path, biometrics_path, notes_path
 
@@ -388,6 +522,45 @@ def build_nutrient_frame(summary: pd.Series, nutrient_columns: list[str]) -> pd.
     return nutrient_df.sort_values("value", ascending=False).reset_index(drop=True)
 
 
+def build_average_comparison_frame(
+    range_df: pd.DataFrame,
+    history_df: pd.DataFrame,
+    nutrient_columns: list[str],
+) -> pd.DataFrame:
+    rows: list[dict[str, object]] = []
+    for column in nutrient_columns:
+        if column not in range_df.columns or column not in history_df.columns:
+            continue
+
+        range_values = pd.to_numeric(range_df[column], errors="coerce").dropna()
+        history_values = pd.to_numeric(history_df[column], errors="coerce").dropna()
+        if range_values.empty or history_values.empty:
+            continue
+
+        range_average = float(range_values.mean())
+        history_average = float(history_values.mean())
+        delta = range_average - history_average
+        delta_pct = (delta / history_average * 100.0) if history_average else None
+        unit = column[column.rfind("(") + 1 : column.rfind(")")] if "(" in column and ")" in column else ""
+        rows.append(
+            {
+                "nutrient": column,
+                "unit": unit,
+                "range_average": range_average,
+                "history_average": history_average,
+                "delta": delta,
+                "delta_pct": delta_pct,
+            }
+        )
+
+    if not rows:
+        return pd.DataFrame()
+
+    result = pd.DataFrame(rows)
+    result["abs_delta_pct"] = result["delta_pct"].abs().fillna(0.0)
+    return result.sort_values("abs_delta_pct", ascending=False).drop(columns=["abs_delta_pct"]).reset_index(drop=True)
+
+
 def ordered_groups(groups: list[str]) -> list[str]:
     seen: list[str] = []
     for group in groups:
@@ -413,24 +586,40 @@ def format_range_label(start_date: date, end_date: date) -> str:
     return f"{start}_to_{end}"
 
 
+def parse_iso_date(value: object) -> date | None:
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(str(value))
+    except ValueError:
+        return None
+
+
 def load_latest_local_run(paths: dict) -> dict | None:
     output_dir = paths["cronometer_output_dir"]
     if not output_dir.exists():
         return None
 
-    servings_files = sorted(output_dir.glob("servings_*.csv"), key=lambda path: path.stat().st_mtime, reverse=True)
-    latest_servings = servings_files[0] if servings_files else None
+    servings_path = output_dir / "servings.csv"
     daily_path = output_dir / "daily_nutrition.csv"
-    biometrics_files = sorted(output_dir.glob("biometrics_*.csv"), key=lambda path: path.stat().st_mtime, reverse=True)
-    latest_biometrics = biometrics_files[0] if biometrics_files else None
-    notes_files = sorted(output_dir.glob("notes_*.csv"), key=lambda path: path.stat().st_mtime, reverse=True)
-    latest_notes = notes_files[0] if notes_files else None
+    biometrics_path = output_dir / "biometrics.csv"
+    notes_path = output_dir / "notes.csv"
 
-    if latest_servings is None and not daily_path.exists() and latest_biometrics is None and latest_notes is None:
+    fallback_servings = sorted(output_dir.glob("servings_*.csv"), key=lambda path: path.stat().st_mtime, reverse=True)
+    fallback_biometrics = sorted(output_dir.glob("biometrics_*.csv"), key=lambda path: path.stat().st_mtime, reverse=True)
+    fallback_notes = sorted(output_dir.glob("notes_*.csv"), key=lambda path: path.stat().st_mtime, reverse=True)
+
+    if not servings_path.exists() and fallback_servings:
+        servings_path = fallback_servings[0]
+    if not biometrics_path.exists() and fallback_biometrics:
+        biometrics_path = fallback_biometrics[0]
+    if not notes_path.exists() and fallback_notes:
+        notes_path = fallback_notes[0]
+
+    if not servings_path.exists() and not daily_path.exists() and not biometrics_path.exists() and not notes_path.exists():
         return None
 
-    range_label = latest_servings.stem.removeprefix("servings_") if latest_servings else "local_cache"
-    servings_df = read_csv_dataframe(latest_servings) if latest_servings else pd.DataFrame()
+    servings_df = read_csv_dataframe(servings_path) if servings_path.exists() else pd.DataFrame()
     daily_df = read_csv_dataframe(daily_path) if daily_path.exists() else pd.DataFrame()
 
     available_dates = collect_available_dates(servings_df, daily_df)
@@ -438,17 +627,17 @@ def load_latest_local_run(paths: dict) -> dict | None:
 
     return {
         "source": "local_cache",
-        "range_label": range_label,
-        "servings_path": str(latest_servings) if latest_servings else "",
+        "range_label": "local_cache",
+        "servings_path": str(servings_path) if servings_path.exists() else "",
         "daily_nutrition_path": str(daily_path) if daily_path.exists() else "",
-        "biometrics_path": str(latest_biometrics) if latest_biometrics else "",
-        "notes_path": str(latest_notes) if latest_notes else "",
+        "biometrics_path": str(biometrics_path) if biometrics_path.exists() else "",
+        "notes_path": str(notes_path) if notes_path.exists() else "",
         "start_date": "",
         "end_date": end_date,
         "fetch_servings": True,
         "fetch_daily_nutrition": daily_path.exists(),
-        "fetch_biometrics": latest_biometrics is not None,
-        "fetch_notes": latest_notes is not None,
+        "fetch_biometrics": biometrics_path.exists(),
+        "fetch_notes": notes_path.exists(),
         "sync_to_google_sheets": False,
         "stdout": "",
         "stderr": "",

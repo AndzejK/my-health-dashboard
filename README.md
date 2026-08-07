@@ -132,11 +132,20 @@ If `Sync to Google Sheets` is off, the app keeps the run local only.
 After the fetch finishes, the app shows:
 - `Food Diary`
 - `Micronutrients`
+- `Trends`
 - an execution log
 
 The Cronometer tab also loads the latest saved local CSV files automatically when you open the app.
 That means you can view the last saved report without fetching again.
 Use `Reload local cache` if you want the app to rescan the folder, or `Fetch Cronometer data` if you want to pull fresh data from Cronometer.
+
+Cronometer local files are cumulative now:
+- `servings.csv`
+- `daily_nutrition.csv`
+- `biometrics.csv`
+- `notes.csv`
+
+Each fetch appends into those files instead of replacing them, so your local dashboard keeps growing over time.
 
 ### Food Diary
 
@@ -153,6 +162,20 @@ It includes:
 - other nutrient totals
 
 The nutrient summary is shown as horizontal bars plus a table.
+
+### Trends
+
+This view compares a selected date range against your saved local Cronometer history.
+It is useful for spotting patterns such as:
+- repeated nutrient gaps
+- average intake over time
+- foods that show up often in a range
+
+The Trends view shows:
+- average values for the selected range
+- comparison against the full saved local history
+- a nutrient bar chart
+- a list of the most frequent foods in the selected range
 
 ### Cronometer Output
 
@@ -190,19 +213,22 @@ That is normal behavior with the current Cronometer export path.
 The app saves Cronometer CSV files locally and reuses them for display.
 
 Saved files include:
-- `servings_<date-range>.csv`
+- `servings.csv`
 - `daily_nutrition.csv`
-- `biometrics_<date-range>.csv`
-- `notes_<date-range>.csv`
+- `biometrics.csv`
+- `notes.csv`
 
-When you reopen the app, the Cronometer dashboard loads the most recent saved files from the Cronometer output folder.
-This lets you review your last fetched data without hitting Cronometer again.
+When you reopen the app, the Cronometer dashboard loads those saved files from the Cronometer output folder.
+This lets you review your full local history without hitting Cronometer again.
+The saved history keeps growing over time because new fetches append into the same files.
 
 ## Recent Changes
 
 These are the main changes that were added recently:
 - Cronometer now has a dashboard-style local view with Food Diary and Micronutrients tabs
+- Cronometer now includes a Trends tab for range averages and history comparison
 - Cronometer now loads the latest saved local CSVs automatically on startup
+- Cronometer local CSVs are now cumulative instead of per-run snapshots
 - Cronometer can run local-only or sync to Google Sheets
 - Cronometer export moved into a separate output folder
 - Cronometer now supports a date range instead of a single day only
